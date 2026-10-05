@@ -33,8 +33,8 @@ function App() {
   const handleAdd = (title) =>
     run(async () => {
       const newTodo = await createTodo(title);
-      setTodos((prev) => [newTodo, ...prev]);
-      setPage(1);
+      setTodos((prev) => [...prev, newTodo]);
+      setPage(Math.ceil((todos.length + 1) / tasksPerPage));
     });
 
   const handleUpdate = (id, data) =>
