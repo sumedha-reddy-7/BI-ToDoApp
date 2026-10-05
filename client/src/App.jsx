@@ -10,8 +10,10 @@ function App() {
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
-  // Runs an API action and shows its error in the banner if it fails
+  const tasksPerPage = 5;
+
   const run = async (action) => {
     try {
       setError("");
@@ -32,15 +34,16 @@ function App() {
     run(async () => {
       const newTodo = await createTodo(title);
       setTodos((prev) => [newTodo, ...prev]);
+      setPage(1);
     });
 
   const handleUpdate = (id, data) =>
-  run(async () => {
-    const updated = await updateTodo(id, data);
-    setTodos((prev) =>
-      prev.map((t) => (t._id === id ? updated : t))
-    );
-  });
+    run(async () => {
+      const updated = await updateTodo(id, data);
+      setTodos((prev) =>
+        prev.map((t) => (t._id === id ? updated : t))
+      );
+    });
 
   const handleDelete = (id) =>
     run(async () => {
@@ -55,14 +58,30 @@ function App() {
       setTodos((prev) => prev.filter((t) => !t.completed));
     });
 
+  const handleFilter = (newFilter) => {
+    setFilter(newFilter);
+    setPage(1);
+  };
+
   const filteredTodos = todos.filter(FILTERS[filter].test);
+
+  const totalPages = Math.ceil(filteredTodos.length / tasksPerPage);
+
+  const start = (page - 1) * tasksPerPage;
+  const currentTodos = filteredTodos.slice(start, start + tasksPerPage);
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
 
   return (
     <div className="layout">
       <Sidebar
         todos={todos}
         filter={filter}
-        onFilter={setFilter}
+        onFilter={handleFilter}
         onClearDone={handleClearDone}
       />
 
@@ -70,7 +89,8 @@ function App() {
         <header className="content-header">
           <h2>{FILTERS[filter].label}</h2>
           <span className="content-count">
-            {filteredTodos.length} {filteredTodos.length === 1 ? "task" : "tasks"}
+            {filteredTodos.length}{" "}
+            {filteredTodos.length === 1 ? "task" : "tasks"}
           </span>
         </header>
 
@@ -97,16 +117,50 @@ function App() {
             </p>
           </div>
         ) : (
-          <ul className="todo-list">
-            {filteredTodos.map((todo) => (
-              <TodoItem
-                key={todo._id}
-                todo={todo}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-              />
-            ))}
-          </ul>
+          <>
+            <ul className="todo-list">
+              {currentTodos.map((todo) => (
+                <TodoItem
+                  key={todo._id}
+                  todo={todo}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </ul>
+
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  className="page-button"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Previous
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i + 1}
+                    className={`page-button ${
+                      page === i + 1 ? "active-page" : ""
+                    }`}
+                    onClick={() => setPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button
+                  className="page-button"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
